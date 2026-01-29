@@ -4,7 +4,7 @@ import { inngestFunctions } from "@/lib/inngest/functions";
 
 export const runtime = "nodejs";
 
-export const { GET, POST } = serve({
+export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: inngestFunctions,
 });

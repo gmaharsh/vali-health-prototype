@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,6 +28,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 text-zinc-950 dark:bg-black dark:text-zinc-50`}
       >
+        <div className="border-b border-black/10 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-black/40">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+            <Link href="/" className="text-sm font-semibold tracking-tight">
+              Vali Health • Prototype
+            </Link>
+            <nav className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
+              <Link className="hover:underline" href="/admin">
+                Admin
+              </Link>
+              <Link className="hover:underline" href="/caregiver">
+                Caregiver
+              </Link>
+              <Link className="hover:underline" href="/client">
+                Client
+              </Link>
+            </nav>
+          </div>
+        </div>
         {children}
       </body>
     </html>

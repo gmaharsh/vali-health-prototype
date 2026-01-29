@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { cancelShift, seedDemoData } from "@/app/server-actions";
+import { cancelShift, seedDemoData } from "./server-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function Home() {
         caregivers ( full_name )
       `,
     )
+    .in("status", ["assigned", "open"])
     .order("start_time", { ascending: true })
     .limit(50);
 
@@ -105,7 +106,9 @@ function ShiftTable(props: { shifts: any[]; latestRunByShift: Map<string, any> }
       </thead>
       <tbody>
         {shifts.map((s) => {
-          const clientLabel = s.clients ? `${s.clients.first_name} ${s.clients.last_initial}.` : s.client_id;
+          const client = s.clients && Array.isArray(s.clients) ? s.clients[0] : s.clients;
+          const caregiver = s.caregivers && Array.isArray(s.caregivers) ? s.caregivers[0] : s.caregivers;
+          const clientLabel = client ? `${client.first_name} ${client.last_initial}.` : s.client_id;
           const run = latestRunByShift.get(s.id);
           const start = new Date(s.start_time).toLocaleString();
           const end = new Date(s.end_time).toLocaleString();
@@ -126,7 +129,7 @@ function ShiftTable(props: { shifts: any[]; latestRunByShift: Map<string, any> }
                   {s.status}
                 </span>
               </td>
-              <td className="px-3 py-3">{s.caregivers?.full_name ?? "—"}</td>
+              <td className="px-3 py-3">{caregiver?.full_name ?? "—"}</td>
               <td className="px-3 py-3">
                 {run ? (
                   <span className="rounded-full bg-white px-2 py-1 text-xs ring-1 ring-black/10 dark:bg-zinc-950 dark:ring-white/10">

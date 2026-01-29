@@ -29,7 +29,9 @@ export async function executeOutreach(input: {
 
   const env = getEnv();
   const hasVapi = Boolean(env.VAPI_API_KEY && env.VAPI_PHONE_NUMBER_ID && env.VAPI_ASSISTANT_ID);
+  const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER);
   const channel: "sms" | "voice" = hasVapi ? "voice" : "sms";
+  const isSimulated = !hasVapi && !hasTwilio;
 
   await setRunChosenCaregiver({ runId: input.runId, caregiverId: candidate.caregiver_id });
 
@@ -57,6 +59,32 @@ export async function executeOutreach(input: {
     `Vali Backfill: Can you cover a shift for ${clientLabelText}?\n` +
     `Start: ${new Date(input.vacancy.startTime).toLocaleString()}\n` +
     `Reply YES or NO.`;
+
+  if (isSimulated) {
+    await supabase
+      .from("backfill_attempts")
+      .update({
+        status: "sent",
+        raw_response: { simulated: true, messagePreview: message },
+      })
+      .eq("id", attemptId);
+
+    await writeAudit({
+      action: "backfill.outreach.simulated",
+      entityType: "backfill_attempt",
+      entityId: attemptId,
+      inputRedacted: {
+        shiftId: input.vacancy.shiftId,
+        caregiverId: candidate.caregiver_id,
+        channel,
+        client: clientLabelText,
+      },
+      output: { topScore: top.finalScore, rationale: top.rationale },
+      rationale: "No Twilio/Vapi configured; created a simulated outreach attempt for demo UI.",
+    });
+
+    return { attemptId, channel, caregiverId: candidate.caregiver_id };
+  }
 
   try {
     if (channel === "sms") {

@@ -15,14 +15,17 @@ const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
 
-  // Inngest (required for event-driven orchestration)
-  INNGEST_EVENT_KEY: z.string().min(1),
-  INNGEST_SIGNING_KEY: z.string().min(1),
+  // Demo knobs (optional)
+  DEMO_CAREGIVER_PHONE: z.string().min(1).optional(),
 
-  // Twilio (SMS gateway)
-  TWILIO_ACCOUNT_SID: z.string().min(1),
-  TWILIO_AUTH_TOKEN: z.string().min(1),
-  TWILIO_FROM_NUMBER: z.string().min(1),
+  // Inngest (optional for local boot; required if you want to emit events / run jobs)
+  INNGEST_EVENT_KEY: z.string().min(1).optional(),
+  INNGEST_SIGNING_KEY: z.string().min(1).optional(),
+
+  // Twilio (optional for local boot; required for SMS sending/escalation)
+  TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
+  TWILIO_AUTH_TOKEN: z.string().min(1).optional(),
+  TWILIO_FROM_NUMBER: z.string().min(1).optional(),
 
   // Vapi (voice gateway)
   VAPI_API_KEY: z.string().min(1).optional(),
