@@ -25,10 +25,32 @@ function deterministicRank(vacancy: ShiftVacancy, candidates: CandidateRow[]): R
 
   return [...candidates]
     .map((c) => {
+      // Hard constraint: candidates missing mandatory requirements should never be selected.
+      if (!c.has_mandatory_skills) {
+        const reliabilityScore = clamp01(c.reliability_score);
+        const languageScore = c.language_match ? 1 : 0;
+        return {
+          caregiverId: c.caregiver_id,
+          finalScore: 0,
+          featureScores: {
+            distance: 0,
+            skills: 0,
+            reliability: reliabilityScore,
+            language: languageScore,
+          },
+          rationale: [
+            `Distance: ${c.distance_miles.toFixed(1)}mi`,
+            "Skills: missing mandatory",
+            `Reliability: ${(reliabilityScore * 100).toFixed(0)}%`,
+            `Language: ${c.language_match ? "match" : "no match"}`,
+          ].join(" • "),
+        } satisfies RankedCandidate;
+      }
+
       const distanceScore = clamp01(1 - Math.min(c.distance_miles / 10, 1));
       const overlap = c.skills_overlap ?? [];
       const overlapScore = clamp01(overlap.length / requiredCount);
-      const skillsScore = c.has_mandatory_skills ? overlapScore : 0;
+      const skillsScore = overlapScore;
       const reliabilityScore = clamp01(c.reliability_score);
       const languageScore = c.language_match ? 1 : 0;
       const finalScore = clamp01(
