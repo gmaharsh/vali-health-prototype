@@ -4,10 +4,15 @@ import { cancelShift, seedDemoData } from "@/app/server-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
-  const supabase = getSupabaseAdmin();
+export default async function AdminPage(props: { searchParams?: Promise<Record<string, string | string[]>> }) {
+  const sp = (await props.searchParams) ?? {};
+  const showAll = String(Array.isArray(sp.showAll) ? sp.showAll[0] : sp.showAll ?? "") === "1";
 
-  const { data: shifts } = await supabase
+  const supabase = getSupabaseAdmin();
+  const now = new Date();
+  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+  let shiftsQuery = supabase
     .from("shifts")
     .select(
       `
@@ -19,7 +24,15 @@ export default async function AdminPage() {
       clients ( first_name, last_initial ),
       caregivers ( full_name )
     `,
-    )
+    );
+
+  if (!showAll) {
+    shiftsQuery = shiftsQuery
+      .gte("start_time", now.toISOString())
+      .lte("start_time", oneHourFromNow.toISOString());
+  }
+
+  const { data: shifts } = await shiftsQuery
     .order("start_time", { ascending: false })
     .limit(50);
 
@@ -51,6 +64,14 @@ export default async function AdminPage() {
           </form>
           <div className="text-sm text-zinc-600 dark:text-zinc-300">
             Tip: cancel an <span className="font-mono">assigned/open</span> shift to trigger backfill.
+          </div>
+          <div className="ml-auto text-sm text-zinc-600 dark:text-zinc-300">
+            <span className="mr-2 rounded-full bg-white px-2 py-1 text-xs ring-1 ring-black/10 dark:bg-zinc-950 dark:ring-white/10">
+              {showAll ? "Showing: all" : "Showing: next 1h"}
+            </span>
+            <Link className="hover:underline" href={showAll ? "/admin" : "/admin?showAll=1"}>
+              {showAll ? "Show next 1h" : "Show all"}
+            </Link>
           </div>
         </section>
 

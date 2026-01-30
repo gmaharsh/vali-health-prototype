@@ -5,8 +5,11 @@ export const dynamic = "force-dynamic";
 export default async function ClientPage(props: { searchParams?: Promise<Record<string, string | string[]>> }) {
   const sp = (await props.searchParams) ?? {};
   const clientId = String(Array.isArray(sp.clientId) ? sp.clientId[0] : sp.clientId ?? "");
+  const showAll = String(Array.isArray(sp.showAll) ? sp.showAll[0] : sp.showAll ?? "") === "1";
 
   const supabase = getSupabaseAdmin();
+  const now = new Date();
+  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
 
   const { data: clients } = await supabase
     .from("clients")
@@ -30,6 +33,8 @@ export default async function ClientPage(props: { searchParams?: Promise<Record<
         `,
         )
         .eq("client_id", selectedId)
+        .gte("start_time", now.toISOString())
+        .lte("start_time", oneHourFromNow.toISOString())
         .order("start_time", { ascending: true })
         .limit(20)
     : { data: [] as any[] };
@@ -55,13 +60,13 @@ export default async function ClientPage(props: { searchParams?: Promise<Record<
 
         <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-950">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Select client</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             {(clients ?? []).map((c: any) => {
               const label = `${c.first_name} ${c.last_initial}.`;
               return (
                 <a
                   key={c.id}
-                  href={`/client?clientId=${encodeURIComponent(c.id)}`}
+                  href={`/client?clientId=${encodeURIComponent(c.id)}${showAll ? "&showAll=1" : ""}`}
                   className={`rounded-xl border px-3 py-2 text-sm ${
                     c.id === selectedId
                       ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-950"
@@ -72,6 +77,12 @@ export default async function ClientPage(props: { searchParams?: Promise<Record<
                 </a>
               );
             })}
+            <a
+              href={`/client?clientId=${encodeURIComponent(selectedId)}${showAll ? "" : "&showAll=1"}`}
+              className="ml-auto text-sm text-zinc-600 hover:underline dark:text-zinc-300"
+            >
+              {showAll ? "Show next 1h" : "Show all"}
+            </a>
           </div>
         </section>
 

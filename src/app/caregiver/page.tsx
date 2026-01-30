@@ -6,8 +6,11 @@ export const dynamic = "force-dynamic";
 export default async function CaregiverPage(props: { searchParams?: Promise<Record<string, string | string[]>> }) {
   const sp = (await props.searchParams) ?? {};
   const caregiverId = String(Array.isArray(sp.caregiverId) ? sp.caregiverId[0] : sp.caregiverId ?? "");
+  const showAll = String(Array.isArray(sp.showAll) ? sp.showAll[0] : sp.showAll ?? "") === "1";
 
   const supabase = getSupabaseAdmin();
+  const now = new Date();
+  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
   const { data: caregivers } = await supabase
     .from("caregivers")
     .select("id, full_name, phone_number, status")
@@ -47,6 +50,14 @@ export default async function CaregiverPage(props: { searchParams?: Promise<Reco
         .limit(20)
     : { data: [] as any[] };
 
+  const filteredOffers = (offers ?? []).filter((o: any) => {
+    if (showAll) return true;
+    const shift = o?.backfill_runs?.shifts;
+    const startTime = shift?.start_time ? new Date(shift.start_time).getTime() : null;
+    if (!startTime) return false;
+    return startTime >= now.getTime() && startTime <= oneHourFromNow.getTime();
+  });
+
   const { data: myShifts } = selectedId
     ? await supabase
         .from("shifts")
@@ -61,6 +72,8 @@ export default async function CaregiverPage(props: { searchParams?: Promise<Reco
         )
         .eq("caregiver_id", selectedId)
         .in("status", ["assigned", "filled"])
+        .gte("start_time", now.toISOString())
+        .lte("start_time", oneHourFromNow.toISOString())
         .order("start_time", { ascending: true })
         .limit(10)
     : { data: [] as any[] };
@@ -78,11 +91,11 @@ export default async function CaregiverPage(props: { searchParams?: Promise<Reco
 
         <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-950">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Select caregiver</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             {(caregivers ?? []).map((c: any) => (
               <a
                 key={c.id}
-                href={`/caregiver?caregiverId=${encodeURIComponent(c.id)}`}
+                href={`/caregiver?caregiverId=${encodeURIComponent(c.id)}${showAll ? "&showAll=1" : ""}`}
                 className={`rounded-xl border px-3 py-2 text-sm ${
                   c.id === selectedId
                     ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-950"
@@ -92,6 +105,12 @@ export default async function CaregiverPage(props: { searchParams?: Promise<Reco
                 {c.full_name}
               </a>
             ))}
+            <a
+              href={`/caregiver?caregiverId=${encodeURIComponent(selectedId)}${showAll ? "" : "&showAll=1"}`}
+              className="ml-auto text-sm text-zinc-600 hover:underline dark:text-zinc-300"
+            >
+              {showAll ? "Show next 1h" : "Show all"}
+            </a>
           </div>
         </section>
 
@@ -99,10 +118,10 @@ export default async function CaregiverPage(props: { searchParams?: Promise<Reco
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-950">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Backfill offers</h2>
             <div className="mt-4 space-y-3">
-              {(offers ?? []).length === 0 ? (
+              {filteredOffers.length === 0 ? (
                 <div className="text-sm text-zinc-600 dark:text-zinc-300">No offers yet.</div>
               ) : (
-                (offers ?? []).map((o: any) => {
+                filteredOffers.map((o: any) => {
                   const run = o.backfill_runs;
                   const shift = run?.shifts;
                   const client =
